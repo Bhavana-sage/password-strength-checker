@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberGuard | Password Generator & Strength Checker</title>
+  <script src="https://tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
+  <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-xl font-bold text-emerald-400">🛡️ CyberGuard Pass</h1>
+      <span class="text-xs bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full">Vignan InfoSec</span>
+    </div>
+    <p class="text-sm text-slate-400 mb-5">Generate uncrackable passwords or test how strong your current password is.</p>
+
+    <!-- Password Input / Display -->
+    <div class="relative mb-3">
+      <input
+        id="passwordInput"
+        type="text"
+        placeholder="Type or generate a password..."
+        oninput="evaluateStrength(this.value)"
+        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 pr-20 text-sm font-mono focus:outline-none focus:border-emerald-400"
+      />
+      <button
+        onclick="copyPassword()"
+        id="copyBtn"
+        class="absolute right-2 top-2 bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 font-medium px-3 py-1.5 rounded-lg transition"
+      >
+        Copy
+      </button>
+    </div>
+
+    <!-- Strength Meter -->
+    <div class="mb-5">
+      <div class="flex justify-between text-xs mb-1.5">
+        <span class="text-slate-400">Security Rating:</span>
+        <span id="strengthLabel" class="font-semibold text-slate-400">Waiting for input...</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div id="strengthBar" class="h-full w-0 bg-slate-600 transition-all duration-300"></div>
+      </div>
+      <p id="crackTime" class="text-xs text-slate-400 mt-2">Estimated crack time: —</p>
+    </div>
+
+    <!-- Generator Controls -->
+    <div class="border-t border-slate-800 pt-4">
+      <div class="flex justify-between text-xs text-slate-300 mb-2">
+        <label for="lengthSlider">Password Length</label>
+        <span id="lengthVal" class="font-bold text-emerald-400">16</span>
+      </div>
+      <input
+        id="lengthSlider"
+        type="range"
+        min="8"
+        max="32"
+        value="16"
+        oninput="document.getElementById('lengthVal').innerText = this.value"
+        class="w-full accent-emerald-400 mb-3 cursor-pointer"
+      />
+
+      <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 mb-4">
+        <label class="flex items-center gap-2"><input id="incUpper" type="checkbox" checked class="accent-emerald-400" /> Uppercase (A-Z)</label>
+        <label class="flex items-center gap-2"><input id="incLower" type="checkbox" checked class="accent-emerald-400" /> Lowercase (a-z)</label>
+        <label class="flex items-center gap-2"><input id="incNum" type="checkbox" checked class="accent-emerald-400" /> Numbers (0-9)</label>
+        <label class="flex items-center gap-2"><input id="incSym" type="checkbox" checked class="accent-emerald-400" /> Symbols (!@#$)</label>
+      </div>
+
+      <button
+        onclick="generatePassword()"
+        class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition cursor-pointer"
+      >
+        ⚡ Generate Strong Password
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function generatePassword() {
+      const len = document.getElementById("lengthSlider").value;
+      const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const lower = "abcdefghijklmnopqrstuvwxyz";
+      const nums = "0123456789";
+      const syms = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+
+      let pool = "";
+      if (document.getElementById("incUpper").checked) pool += upper;
+      if (document.getElementById("incLower").checked) pool += lower;
+      if (document.getElementById("incNum").checked) pool += nums;
+      if (document.getElementById("incSym").checked) pool += syms;
+
+      if (!pool) {
+        alert("Please select at least one character type!");
+        return;
+      }
+
+      let pwd = "";
+      const array = new Uint32Array(len);
+      window.crypto.getRandomValues(array);
+      for (let i = 0; i < len; i++) {
+        pwd += pool[array[i] % pool.length];
+      }
+
+      const input = document.getElementById("passwordInput");
+      input.value = pwd;
+      evaluateStrength(pwd);
+    }
+
+    function evaluateStrength(pwd) {
+      const bar = document.getElementById("strengthBar");
+      const label = document.getElementById("strengthLabel");
+      const crack = document.getElementById("crackTime");
+
+      if (!pwd) {
+        bar.style.width = "0%";
+        label.innerText = "Waiting for input...";
+        label.className = "font-semibold text-slate-400";
+        crack.innerText = "Estimated crack time: —";
+        return;
+      }
+
+      let score = 0;
+      if (pwd.length >= 8) score++;
+      if (pwd.length >= 12) score++;
+      if (pwd.length >= 16) score++;
+      if (/[A-Z]/.test(pwd)) score++;
+      if (/[a-z]/.test(pwd)) score++;
+      if (/[0-9]/.test(pwd)) score++;
+      if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+      if (score <= 2) {
+        bar.style.width = "25%";
+        bar.className = "h-full bg-rose-500 transition-all duration-300";
+        label.innerText = "Weak (Vulnerable)";
+        label.className = "font-semibold text-rose-400";
+        crack.innerText = "Estimated crack time: Instantly";
+      } else if (score <= 4) {
+        bar.style.width = "50%";
+        bar.className = "h-full bg-amber-400 transition-all duration-300";
+        label.innerText = "Moderate";
+        label.className = "font-semibold text-amber-400";
+        crack.innerText = "Estimated crack time: A few hours to days";
+      } else if (score <= 6) {
+        bar.style.width = "75%";
+        bar.className = "h-full bg-sky-400 transition-all duration-300";
+        label.innerText = "Strong";
+        label.className = "font-semibold text-sky-400";
+        crack.innerText = "Estimated crack time: Several years";
+      } else {
+        bar.style.width = "100%";
+        bar.className = "h-full bg-emerald-400 transition-all duration-300";
+        label.innerText = "Very Strong (Military Grade)";
+        label.className = "font-semibold text-emerald-400";
+        crack.innerText = "Estimated crack time: Centuries";
+      }
+    }
+
+    function copyPassword() {
+      const input = document.getElementById("passwordInput");
+      if (!input.value) return;
+      navigator.clipboard.writeText(input.value);
+      const btn = document.getElementById("copyBtn");
+      btn.innerText = "Copied!";
+      setTimeout(() => (btn.innerText = "Copy"), 1500);
+    }
+  </script>
+</body>
+</html>
